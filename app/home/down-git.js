@@ -124,6 +124,7 @@ downGitModule.factory('downGitService', [
             progress.downloadedFiles.val = 0;
             progress.totalFiles.val = 1;
 
+            console.log("正在下载文件:", url);
             var zip = new JSZip();
             $http.get(url, {responseType: "arraybuffer"}).then(function (file) {
                 progress.downloadedFiles.val = 1;
@@ -134,9 +135,24 @@ downGitModule.factory('downGitService', [
                     saveAs(content, repoInfo.downloadFileName+".zip");
                 });
             }, function(error) {
-                console.log(error);
+                console.error("下载失败，错误详情:", error);
+                console.error("请求的 URL:", url);
+                console.error("状态码:", error.status);
+                console.error("错误信息:", error.statusText);
                 progress.isProcessing.val=false;
-                toastr.warning("Error! Server failure or wrong URL.", {iconClass: 'toast-down'});
+                
+                var errorMsg = "Error! ";
+                if (error.status === 403) {
+                    errorMsg += "GitHub API 速率限制，请稍后再试。";
+                } else if (error.status === 404) {
+                    errorMsg += "文件不存在或 URL 错误。";
+                } else if (error.status === 0) {
+                    errorMsg += "网络错误或 CORS 问题。";
+                } else {
+                    errorMsg += "服务器错误 (状态码: " + error.status + ")";
+                }
+                
+                toastr.warning(errorMsg, {iconClass: 'toast-down', timeOut: 5000});
             });
         }
 
@@ -155,7 +171,11 @@ downGitModule.factory('downGitService', [
                     window.location = downloadUrl;
 
                 }else{
-                    $http.get(repoInfo.urlPrefix+repoInfo.resPath+repoInfo.urlPostfix).then(function(response) {
+                    var apiUrl = repoInfo.urlPrefix+repoInfo.resPath+repoInfo.urlPostfix;
+                    console.log("正在请求 GitHub API:", apiUrl);
+                    
+                    $http.get(apiUrl).then(function(response) {
+                        console.log("API 响应成功:", response);
                         if(response.data instanceof Array){
                             downloadDir(progress);
                         }else{
@@ -163,7 +183,7 @@ downGitModule.factory('downGitService', [
                         }
 
                     }, function(error) {
-                        console.log("probable big file.");
+                        console.warn("API 请求失败，尝试使用 raw.githubusercontent.com:", error);
                         downloadFile("https://raw.githubusercontent.com/"+repoInfo.author+"/"+
                                 repoInfo.repository+"/"+repoInfo.branch+"/"+repoInfo.resPath,
                                 progress, toastr);
