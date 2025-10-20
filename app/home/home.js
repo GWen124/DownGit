@@ -32,7 +32,8 @@ homeModule.config([
 
                     var templateUrl = "https?://github.com/.+/.+";
                     var downloadUrlInfix = "#/home?url=";
-                    var downloadUrlPrefix = "https://minhaskamal.github.io/DownGit/"+downloadUrlInfix;
+                    // 使用当前页面的 URL，这样部署到任何地方都可以工作
+                    var downloadUrlPrefix = window.location.origin + window.location.pathname + downloadUrlInfix;
 
                     if ($routeParams.url) {
                         $scope.url = $routeParams.url;
